@@ -1,0 +1,13 @@
+# Configuration for Robocop, which since v6 provides both linting
+# (`robocop check`) and formatting (`robocop format`).
+# Robocop reads this file automatically when run from the project root.
+
+[tool.robocop.lint]
+ignore = [
+    "DOC02",   # don't require [Documentation] on every test case
+    "DOC03",   # don't require [Documentation] on every keyword
+    "DEPR06",  # allow `Create Dictionary` etc.; not everyone is on RF 7's VAR yet
+]
+
+[tool.robocop.format]
+line_length = 120

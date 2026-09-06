@@ -1,0 +1,10 @@
+# Default Robot Framework arguments.
+# Use it with:  robot --argumentfile robot.args tests/
+# (the Makefile does this for you)
+
+--outputdir results
+--pythonpath libraries
+--pythonpath resources
+--pythonpath variables
+--loglevel INFO
+--console verbose

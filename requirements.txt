@@ -1,0 +1,19 @@
+# Robot Framework project dependencies
+# Install:  .venv/bin/pip install -r requirements.txt
+#
+# Versions are pinned for reproducibility. Bump deliberately and re-run tests.
+
+# Core
+robotframework==7.4.2
+
+# Libraries
+robotframework-seleniumlibrary==6.9.0   # Web UI automation
+robotframework-requests==0.9.7          # HTTP / REST API testing
+robotframework-jsonlibrary==0.5         # JSON assertions / JSONPath
+
+# Tooling
+robotframework-robocop==9.0.0           # Linter + formatter (robocop check / robocop format)
+
+# Note: Selenium 4 ships "Selenium Manager", which downloads the matching
+# browser driver automatically -- no separate driver-manager package needed.
+# A real browser (Chrome/Firefox) must still be installed to run UI suites.

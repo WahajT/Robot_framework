@@ -4,35 +4,423 @@
 \usepackage[utf8]{inputenc}   % For encoding
 \usepackage{amsmath}          % For mathematical equations
 \usepackage{graphicx}         % For including images
-% \usepackage{hyperref}         % For hyperlinks
 \usepackage{geometry}         % For adjusting page margins
-\usepackage{lipsum} 
-\usepackage{listings}          
+\usepackage{listings}         % For code listings
+\usepackage{longtable}        % For tables that span pages
 
 % Document settings
 \geometry{margin=1in}
 
-\title{RobotFramework}
-\author{Wahaj Tahir Software Egnineer}
+% Monospace helper; use \code{...} and escape underscores as \_
+\newcommand{\code}[1]{\texttt{#1}}
 
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  columns=fullflexible,
+  showstringspaces=false,
+  keepspaces=true,
+}
+
+\title{Robot Framework Test Automation Project\\[0.5em]
+       \large Setup, Structure and Usage Guide}
+\author{Wahaj Tahir --- Software Engineer}
 \date{\today}
+
 \begin{document}
 \maketitle
 \tableofcontents
 \newpage
-\section{robotFramework}
-robotFramework is modern solution for Web-app testing.
-\subsection{setup}
-robotFramework is written in javascript and so to install we need to use npm which is the package manager of javascript.
 
-\noindent See the following command :
+\section{Overview}
+
+Robot Framework is an open-source, keyword-driven test automation framework.
+It is implemented in Python and runs on any platform with a Python interpreter.
+Test cases are written in a readable, tabular plain-text syntax (files with the
+\code{.robot} extension) and are executed by the \code{robot} command-line tool,
+which produces an XML result file together with an HTML log and report.
+
+Robot Framework itself provides only the test-execution engine and a set of
+generic built-in keywords. Domain-specific capabilities are added through
+\emph{libraries}: SeleniumLibrary drives a real web browser, RequestsLibrary
+performs HTTP calls, and project-specific Python modules can expose their own
+keywords. This project wires several of those libraries together with a small
+amount of supporting structure so that new suites can be added with no further
+configuration.
+
+\subsection{Note on a common misconception}
+
+Robot Framework is \emph{not} a JavaScript tool and is unrelated to \code{npm}
+or Cypress. It is installed from the Python Package Index (PyPI) with \code{pip},
+normally into an isolated virtual environment.
+
+\section{Prerequisites}
+
+\begin{itemize}
+  \item Python 3.8 or newer (this project was set up with Python 3.12).
+  \item The ability to create a Python virtual environment. On Debian/Ubuntu the
+        \code{python3-venv} and \code{python3-pip} packages provide this; if they
+        cannot be installed, the \code{virtualenv} package from PyPI is an
+        equivalent substitute (see Section~\ref{sec:bootstrap}).
+  \item For browser suites only: a locally installed Chrome or Firefox. The
+        matching browser driver is downloaded automatically by Selenium~4's
+        built-in Selenium Manager, so no \code{chromedriver} needs to be
+        installed by hand.
+  \item For the API example suite only: outbound internet access.
+\end{itemize}
+
+\section{Installation}
+\label{sec:bootstrap}
+
+All dependencies are installed into a project-local virtual environment at
+\code{.venv/} so that they never interfere with the system Python.
+
+\subsection{Standard installation}
+
 \begin{lstlisting}[language=bash]
-  npm init
-\end{lstlisting}
-\noindent See the following command :
-\begin{lstlisting}[language=bash]
-  npm install cypress --save-dev
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 \end{lstlisting}
 
+\subsection{Installation when the system has no pip or venv}
+
+The machine this project was created on had neither \code{pip} nor the
+\code{venv} module available, and installing them through the system package
+manager required administrator rights that were not available. The environment
+was therefore bootstrapped without administrator rights as follows:
+
+\begin{enumerate}
+  \item Download the official \code{get-pip.py} bootstrap script from
+        \code{https://bootstrap.pypa.io/get-pip.py}.
+  \item Install \code{pip} into the per-user site with
+        \code{python3 get-pip.py --user --break-system-packages}.
+  \item Install the \code{virtualenv} package the same way:
+        \code{python3 -m pip install --user --break-system-packages virtualenv}.
+  \item Create the project environment with
+        \code{python3 -m virtualenv .venv}.
+  \item Install the project dependencies with
+        \code{.venv/bin/pip install -r requirements.txt}.
+\end{enumerate}
+
+This route is a workaround. For a team or a continuous-integration pipeline the
+standard installation should be used instead, ideally inside a container image
+that already contains Python and \code{pip}.
+
+\subsection{Dependency files}
+
+\begin{longtable}{p{0.32\textwidth} p{0.60\textwidth}}
+\hline
+\textbf{File} & \textbf{Purpose} \\
+\hline
+\endhead
+\code{requirements.txt} &
+  The intended dependencies, pinned to exact versions and annotated with a short
+  comment explaining why each one is present. This is the file to edit when
+  changing a dependency. \\
+\code{requirements.lock.txt} &
+  The complete output of \code{pip freeze}, including transitive dependencies,
+  captured for exact reproduction of a known-good environment. \\
+\hline
+\end{longtable}
+
+\noindent The direct dependencies are:
+
+\begin{longtable}{p{0.42\textwidth} p{0.50\textwidth}}
+\hline
+\textbf{Package} & \textbf{Role} \\
+\hline
+\endhead
+\code{robotframework} & The test framework and \code{robot} runner. \\
+\code{robotframework-seleniumlibrary} & Web user-interface automation. \\
+\code{robotframework-requests} & HTTP and REST API testing. \\
+\code{robotframework-jsonlibrary} & JSON assertions and JSONPath queries. \\
+\code{robotframework-robocop} & Static analysis (linting) and code formatting. \\
+\hline
+\end{longtable}
+
+\section{Project Structure}
+
+\begin{longtable}{p{0.30\textwidth} p{0.62\textwidth}}
+\hline
+\textbf{Path} & \textbf{Purpose} \\
+\hline
+\endhead
+\code{tests/} &
+  Test suites (\code{*.robot}), grouped into sub-directories by kind, for
+  example \code{tests/api/} and \code{tests/ui/}. \\
+\code{resources/} &
+  Reusable keyword definitions and shared imports, in \code{*.resource} files. \\
+\code{libraries/} &
+  Custom keyword libraries written in Python. \\
+\code{variables/} &
+  Variable files, such as the environment configuration. \\
+\code{results/} &
+  Generated \code{output.xml}, \code{log.html} and \code{report.html}. This
+  directory is ignored by version control. \\
+\code{robot.args} &
+  Default command-line arguments passed to every \code{robot} run. \\
+\code{pyproject.toml} &
+  Configuration for the Robocop linter and formatter. \\
+\code{run.sh} &
+  A dependency-free task runner (see Section~\ref{sec:running}). \\
+\code{Makefile} &
+  The same tasks for users who have \code{make} installed. \\
+\code{requirements.txt} / \code{requirements.lock.txt} &
+  Dependency definitions, described above. \\
+\hline
+\end{longtable}
+
+\section{Configuration}
+
+\subsection{robot.args}
+
+Robot Framework version~7 does not yet read a native \code{robot.toml}
+configuration file, so shared run settings are kept in an \emph{argument file}
+named \code{robot.args}. Every task in \code{run.sh} and the \code{Makefile}
+passes this file to \code{robot} with the \code{-{}-argumentfile} option. Its
+contents are:
+
+\begin{lstlisting}
+--outputdir results
+--pythonpath libraries
+--pythonpath resources
+--pythonpath variables
+--loglevel INFO
+--console verbose
+\end{lstlisting}
+
+The three \code{-{}-pythonpath} entries are what allow a suite to write
+\code{Resource common.resource}, \code{Library CustomLibrary} or
+\code{Variables environments.py} without giving a path relative to the suite
+file.
+
+\subsection{pyproject.toml}
+
+Robocop (which since version~6 provides both linting and formatting) reads its
+configuration from \code{pyproject.toml}. The project disables three
+documentation rules that are too strict for small example suites and one rule
+that would require the Robot Framework~7 \code{VAR} syntax, so that the default
+\code{robocop check} run is clean.
+
+\section{Writing Tests}
+
+\subsection{Suite files}
+
+A suite is a single \code{.robot} file. It is divided into sections introduced by
+headings such as \code{*** Settings ***}, \code{*** Variables ***},
+\code{*** Test Cases ***} and \code{*** Keywords ***}. The smoke suite,
+reproduced in Appendix~\ref{sec:smoke}, is a minimal example.
+
+\subsection{Tags}
+
+Every suite in this project assigns a tag with \code{Test Tags} in its settings
+section: \code{smoke}, \code{api} or \code{ui}. Tags are how a subset of tests is
+selected at run time, for example \code{robot -{}-include smoke tests/}. The
+convention here is:
+
+\begin{itemize}
+  \item \code{smoke} --- no browser and no network; always safe to run.
+  \item \code{api} --- requires outbound internet access.
+  \item \code{ui} --- requires a locally installed browser.
+\end{itemize}
+
+\subsection{Shared keywords}
+
+Keywords used by more than one suite belong in a \code{.resource} file under
+\code{resources/}. A suite imports them with \code{Resource common.resource} in
+its settings section. As the project grows, this single file should be split
+into per-domain resource files, for example \code{resources/api/} for API
+client keywords and \code{resources/ui/} for page objects.
+
+\subsection{Custom Python libraries}
+
+When a keyword is easier to express in Python than in Robot Framework syntax, it
+is written as a method on a class in \code{libraries/}. Robot Framework converts
+each public method into a keyword, so \code{reverse\_string} becomes the keyword
+\code{Reverse String}. The suite imports the class with
+\code{Library CustomLibrary}.
+
+\subsection{Environment configuration}
+
+\code{variables/environments.py} selects a base URL from the \code{TEST\_ENV}
+environment variable, whose accepted values are \code{dev}, \code{staging} and
+\code{prod} (the default is \code{dev}). It also exposes a \code{BROWSER}
+variable, which defaults to headless Chrome. Both can be overridden on the
+command line, for example:
+
+\begin{lstlisting}[language=bash]
+TEST_ENV=staging .venv/bin/robot --argumentfile robot.args \
+    --include api tests/
+\end{lstlisting}
+
+\section{Running Tests}
+\label{sec:running}
+
+The recommended entry point is the \code{run.sh} script, which activates the
+correct interpreter and applies \code{robot.args} automatically.
+
+\begin{longtable}{p{0.34\textwidth} p{0.58\textwidth}}
+\hline
+\textbf{Command} & \textbf{Effect} \\
+\hline
+\endhead
+\code{./run.sh install} & Create \code{.venv} and install dependencies. \\
+\code{./run.sh test} & Run every suite under \code{tests/}. \\
+\code{./run.sh smoke} & Run only tests tagged \code{smoke}. \\
+\code{./run.sh api} & Run only tests tagged \code{api} (needs network). \\
+\code{./run.sh ui} & Run only tests tagged \code{ui} (needs a browser). \\
+\code{./run.sh lint} & Static analysis with Robocop. \\
+\code{./run.sh format} & Re-format suites in place with Robocop. \\
+\code{./run.sh clean} & Delete the contents of \code{results/}. \\
+\hline
+\end{longtable}
+
+\noindent Any additional arguments are forwarded to \code{robot}, so a single
+suite or an ad-hoc option can be supplied:
+
+\begin{lstlisting}[language=bash]
+./run.sh test tests/01_smoke.robot
+./run.sh ui --variable BROWSER:firefox
+\end{lstlisting}
+
+\noindent The equivalent call without the wrapper script is:
+
+\begin{lstlisting}[language=bash]
+.venv/bin/robot --argumentfile robot.args tests/01_smoke.robot
+\end{lstlisting}
+
+\noindent Users who have \code{make} installed can use \code{make test},
+\code{make smoke} and so on, which invoke the same commands.
+
+\section{Results and Reports}
+
+After every run, three files are written to \code{results/}:
+
+\begin{itemize}
+  \item \code{output.xml} --- the machine-readable result, used for combining or
+        re-processing runs with the \code{rebot} tool.
+  \item \code{log.html} --- a detailed, keyword-by-keyword execution log; this is
+        the file to open when a test fails.
+  \item \code{report.html} --- a high-level pass/fail summary.
+\end{itemize}
+
+\section{Linting and Formatting}
+
+\begin{lstlisting}[language=bash]
+./run.sh lint      # robocop check   -- reports style and correctness issues
+./run.sh format    # robocop format  -- rewrites files to a consistent style
+\end{lstlisting}
+
+\noindent Linting should be run before committing. The current suites pass with
+no reported issues.
+
+\section{Scalability and Roadmap}
+
+The test structure --- directory nesting under \code{tests/} combined with tag
+selection --- scales to a large suite without change. The environment and
+execution layers, however, were kept deliberately small and will need the
+following additions before a team relies on the project:
+
+\begin{enumerate}
+  \item \textbf{Reproducible installation.} Replace the per-user \code{get-pip.py}
+        bootstrap with a container image, or with the standard
+        \code{python3-venv} package, so that every developer and CI runner builds
+        an identical environment.
+  \item \textbf{Continuous integration.} Add a pipeline that runs the
+        \code{smoke} tag on every change and the \code{api} and \code{ui} tags on
+        a schedule.
+  \item \textbf{Parallel execution.} Introduce \code{robotframework-pabot} to run
+        suites across multiple processes once serial execution time becomes a
+        problem.
+  \item \textbf{Layered resources.} Split \code{resources/common.resource} into
+        per-service and per-page files as the number of keywords grows.
+  \item \textbf{Result history.} Merge shard results with \code{rebot} and feed a
+        reporting system such as Allure or ReportPortal for trend and
+        flaky-test tracking.
+  \item \textbf{Test data management.} Add data factories in a Python library, or
+        adopt \code{robotframework-datadriver} for data-driven suites.
+\end{enumerate}
+
+\appendix
+
+\section{Example: the smoke suite}
+\label{sec:smoke}
+
+\begin{lstlisting}
+*** Settings ***
+Documentation    Smoke suite with no external dependencies.
+...              Verifies the toolchain, resource files and custom library load.
+
+Resource         common.resource
+Library          CustomLibrary
+
+Suite Setup      Log Environment Banner
+
+Test Tags        smoke
+
+
+*** Test Cases ***
+Framework Is Installed
+    ${version}=    Evaluate    robot.version.VERSION    modules=robot
+    Should Not Be Empty    ${version}
+    Log    Running on Robot Framework ${version}
+
+Shared Keyword Works
+    Numbers Should Be Equal    2    2.0
+
+Custom Library Keyword Works
+    ${reversed}=    Reverse String    Robot
+    Should Be Equal    ${reversed}    toboR
+
+Palindrome Check
+    Should Be Palindrome    A man, a plan, a canal: Panama
+\end{lstlisting}
+
+\section{Example: the API suite}
+
+\begin{lstlisting}
+*** Settings ***
+Documentation    REST API example using RequestsLibrary against a public API.
+...              Requires network access.
+
+Library          Collections
+Library          RequestsLibrary
+Variables        environments.py
+
+Suite Setup      Create Session    api    ${BASE_URL}    verify=${True}
+
+Test Tags        api
+
+
+*** Test Cases ***
+Get A Single Post
+    ${response}=    GET On Session    api    /posts/1
+    Status Should Be    200    ${response}
+    Should Be Equal As Integers    ${response.json()}[id]    1
+
+List Posts Returns A Collection
+    ${response}=    GET On Session    api    /posts
+    Status Should Be    200    ${response}
+    Length Should Be    ${response.json()}    100
+
+Create A Post
+    ${payload}=    Create Dictionary    title=hello    body=world    userId=${1}
+    ${response}=    POST On Session    api    /posts    json=${payload}
+    Status Should Be    201    ${response}
+    Should Be Equal    ${response.json()}[title]    hello
+\end{lstlisting}
+
+\section{Rebuilding this document}
+
+This file is written in LaTeX. The machine it was authored on did not have a
+LaTeX distribution installed, so the accompanying \code{main.pdf} may be out of
+date. To rebuild it, install a TeX distribution (for example TeX Live) and run:
+
+\begin{lstlisting}[language=bash]
+cd Document
+pdflatex main.tex
+pdflatex main.tex   # run twice so the table of contents resolves
+\end{lstlisting}
 
 \end{document}
